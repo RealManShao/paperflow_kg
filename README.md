@@ -67,12 +67,11 @@ project/
    - 记录用户名（默认 `neo4j`）和密码。
 
 ### 3.2 数据准备
+数据集采用Microsoft KG20C （[arxiv](https://arxiv.org/pdf/2512.21799)）原始数据为TXT格式，经过清洗后得到CSV格式的数据文件。
 
-将清洗好的数据文件放入 `data/raw/` 目录：
+清洗好的数据文件在 `data/processed/` 目录：
 - `entities.csv`: 格式为 `id,name,type`
 - `relations.csv`: 格式为 `start_id,rel_type,end_id`
-
-*(注：如果数据格式不同，请修改 `src/build_kg.py` 中的解析逻辑)*
 
 ### 3.3 构建知识图谱
 
