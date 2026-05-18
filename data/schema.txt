@@ -10,7 +10,7 @@ Affiliation: 代表作者所属机构，核心属性为机构名 (name)。
 (:Paper)-[:CITES]->(:Paper): 表示论文间的引用关系，支持多跳推理。
 (:Paper)-[:PUBLISHED_IN]->(:Conference): 表示论文的发表出处。
 (:Paper)-[:BELONGS_TO_DOMAIN]->(:Domain): 表示论文的研究主题归属。
-(:Author)-[:AFFILIATED_WITH]->(:Affiliation): 表示作者的机构隶属关系。
+(:Author)-[:BELONGS_TO_AFFILIATION]->(:Affiliation): 表示作者的机构隶属关系。
 约束与索引:
 对所有实体类型的 id 字段建立 唯一约束 (Unique Constraint)，确保实体全局唯一性并加速关系匹配。
 对 name 字段建立 全文索引 (Full-text Index) 或 普通索引，以支持基于名称的快速检索和大模型实体链接。
