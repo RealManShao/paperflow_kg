@@ -3,10 +3,10 @@ import os
 from neo4j import GraphDatabase
 
 # ================= 配置区域 =================
-NEO4J_URI = "neo4j://127.0.0.1:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "12345678"  # 请修改为你的密码
-NEO4J_DATABASE = "test2" 
+NEO4J_URI='neo4j+s://57848aa8.databases.neo4j.io'
+NEO4J_USERNAME='57848aa8'
+NEO4J_PASSWORD='fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM'
+NEO4J_DATABASE='57848aa8'
 # 文件路径
 ENTITY_FILE = "data/processed/entities.csv"
 RELATION_FILE = "data/processed/relations.csv"
@@ -204,7 +204,7 @@ class KGBuilder:
 
 # ================= 执行入口 =================
 if __name__ == "__main__":
-    builder = KGBuilder(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE)
+    builder = KGBuilder(NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, NEO4J_DATABASE)
     
     try:
         # 1. 创建约束

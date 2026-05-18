@@ -9,8 +9,6 @@
 2. **知识推理引擎**：实现基于路径搜索（BFS/Shortest Path）的推理算法，支持多跳关系查询与证据链发现。
 3. **LLM 增强问答 (GraphRAG)**：采用“检索-生成”架构，先从图谱中检索相关子图与推理路径作为证据，再注入 LLM Prompt，显著提升回答的准确性、可解释性并减少幻觉。
 
-本项目满足课程作业要求，包含完整的代码实现、实验对比分析及可视化演示原型。
-
 ---
 
 ## 2. 代码架构
@@ -59,12 +57,11 @@ project/
    ```bash
    pip install -r requirements.txt
    ```
-   *主要依赖：`neo4j`, `networkx`, `pandas`, `openai` (或 `ollama`)*
+   *主要依赖：`neo4j`, `networkx`, `pandas`, `openai`*
 
 2. **启动 Neo4j 数据库**：
-   - 推荐使用 **Neo4j Desktop** 或 **Docker**。
-   - 确保数据库服务正在运行，默认端口为 `7687` (Bolt) 和 `7474` (Browser)。
-   - 记录用户名（默认 `neo4j`）和密码。
+   - Free Aura service
+
 
 ### 3.2 数据准备
 数据集采用Microsoft KG20C （[arxiv](https://arxiv.org/pdf/2512.21799)）原始数据为TXT格式，经过清洗后得到CSV格式的数据文件。
@@ -88,11 +85,6 @@ python src/build_kg.py
 在 `src/llm_qa.py` 或环境变量中配置 LLM 密钥或本地模型地址：
 
 ```python
-# 示例：使用 Ollama 本地模型
-OLLAMA_MODEL = "llama3:8b"
-OLLAMA_BASE_URL = "http://localhost:11434"
-
-# 或者使用 OpenAI API
 OPENAI_API_KEY = "sk-..."
 ```
 
