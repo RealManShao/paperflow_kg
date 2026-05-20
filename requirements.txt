@@ -1,0 +1,4 @@
+requests
+openai
+neo4j
+longchain
