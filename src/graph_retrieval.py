@@ -3,14 +3,14 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
-NEO4J_URL = os.getenv("NEO4J_URL", "https://57848aa8.databases.neo4j.io/db/57848aa8/query/v2")
+NEO4J_Query_API_URL = os.getenv("NEO4J_Query_API_URL", "https://57848aa8.databases.neo4j.io/db/57848aa8/query/v2")
 NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "57848aa8")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM")
 
 
 class GraphRetriever:
     def __init__(self, url=None, username=None, password=None):
-        self.url = url or NEO4J_URL
+        self.url = url or NEO4J_Query_API_URL
         self.auth = HTTPBasicAuth(username or NEO4J_USERNAME, password or NEO4J_PASSWORD)
 
     def _run(self, query, parameters=None):
