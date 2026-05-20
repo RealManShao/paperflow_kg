@@ -91,12 +91,15 @@ class GraphRAG:
 
     def _query_neo4j(self, cypher):
         body = {"statement": cypher}
-        try:
-            resp = requests.post(self.neo4j_url, json=body, auth=self.neo4j_auth, timeout=30, verify=False)
-            resp.raise_for_status()
-        except requests.exceptions.SSLError:
-            resp = requests.post(self.neo4j_url, json=body, auth=self.neo4j_auth, timeout=30, verify=False)
-            resp.raise_for_status()
+        resp = requests.post(
+            self.neo4j_url,
+            json=body,
+            auth=self.neo4j_auth,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            timeout=15,
+            verify=False,
+        )
+        resp.raise_for_status()
         data = resp.json()
         result_data = data.get("data", {})
         fields = result_data.get("fields", [])
@@ -110,9 +113,14 @@ class GraphRAG:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0,
+            temperature=0.7,
             stream=True,
-            extra_body={"enable_thinking": False},
+            extra_body={
+                "enable_thinking": False,
+                "top_p": 0.8,
+                "top_k": 20,
+                "min_p": 0
+            },
         )
         content = ""
         for chunk in stream:
@@ -158,9 +166,14 @@ class GraphRAG:
         stream = self.llm_client.chat.completions.create(
             model=self.llm_model,
             messages=[{"role": "user", "content": question}],
-            temperature=0,
+            temperature=0.7,
             stream=True,
-            extra_body={"enable_thinking": False},
+            extra_body={
+                "enable_thinking": False,
+                "top_p": 0.8,
+                "top_k": 20,
+                "min_p": 0
+            },
         )
         content = ""
         for chunk in stream:
@@ -185,9 +198,9 @@ def run_interactive(rag):
             if not question.strip():
                 continue
 
-            # print("[Baseline]")
-            # baseline = rag.ask_baseline(question)
-            # print(f"  {baseline['answer']}\n")
+            print("[Baseline]")
+            baseline = rag.ask_baseline(question)
+            print(f"  {baseline['answer']}\n")
 
             print("[Augmented (KG + LLM)]")
             augmented = rag.ask_augmented(question)
