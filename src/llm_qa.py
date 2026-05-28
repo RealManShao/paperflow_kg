@@ -38,18 +38,49 @@ Relationships:
 """)
 
 
+CYPHER_EXAMPLES = dedent("""\
+/* Example 1: Find papers in a specific domain with high citation count */
+MATCH (p:Paper)-[:BELONGS_TO_DOMAIN]->(d:Domain {name: "Algorithm"})
+MATCH (p)<-[:CITES]-(c:Paper)
+WITH p, count(c) AS citationCount
+WHERE citationCount > 5
+RETURN p.name
+LIMIT 5
+
+/* Example 2: Find all papers written by an author and their citations */
+MATCH (a:Author {name: 'ralf sarlette'})-[w:WRITES]->(p:Paper)
+OPTIONAL MATCH (p)-[c:CITES]->(cited:Paper)
+RETURN p.name AS PaperName, p.id AS PaperID, cited.name AS CitedPaperName, cited.id AS CitedPaperID
+
+/* Example 3: Find papers in a domain published in specific conferences */
+MATCH (p:Paper)-[BELONGS_TO_DOMAIN]->(d:Domain {name: 'Software architecture'})
+MATCH (p)-[PUBLISHED_IN]->(c:Conference)
+WHERE c.name IN ['AAAI']
+RETURN p.name AS paper, d.name AS domain, c.name AS conference
+""")
+
 CYPHER_GENERATION_PROMPT = dedent("""\
-You are a Neo4j Cypher expert. Given the graph schema and a user question, generate a valid Cypher query.
+You are a Neo4j Cypher expert. Given the graph schema and a user question, generate a valid Cypher query using multi-jump method for complex questions.
 
 Schema:
 {schema}
 
+Multi-Jump Method for Complex Queries:
+- Break down complex questions into multiple MATCH clauses to traverse relationships step by step
+- Use WITH clauses to aggregate or filter intermediate results
+- Apply aggregation functions (count, max, min, avg) when needed
+- Use WHERE clauses after WITH to filter aggregated results
+
+Schema Examples:
+{examples}
+
 Rules:
 - Use only the node labels and relationship types from the schema.
-- The relationnship direction is strictly defined as in the schema, do NOT reverse it.
+- The relationship direction is strictly defined as in the schema, do NOT reverse it.
 - Return name fields for nodes.
 - Return LIMIT 10 unless specified otherwise.
 - Do NOT use shortestPath() with variable-length path bounds as parameters.
+- For complex questions, use multiple MATCH and WITH clauses to navigate the graph
 
 User question: {question}
 
@@ -131,7 +162,7 @@ class GraphRAG:
     def ask(self, question):
         cypher = self._llm_chat(
             "You are a Cypher expert. Output ONLY the query, no other text.",
-            CYPHER_GENERATION_PROMPT.format(schema=GRAPH_SCHEMA, question=question),
+            CYPHER_GENERATION_PROMPT.format(schema=GRAPH_SCHEMA, examples=CYPHER_EXAMPLES, question=question),
         )
         cypher = cypher.strip().removeprefix("```cypher").removeprefix("```").removesuffix("```").strip()
 
