@@ -114,5 +114,3 @@ python src/evaluate.py
 
 1. **数据唯一性**：确保 `entities.csv` 中的 ID 全局唯一，否则导入时会因唯一约束冲突报错。
 2. **关系类型映射**：`build_kg.py` 中预定义了关系类型映射表，若新增关系类型，请在 `RELATION_MAPPING` 字典中添加对应项。
-3. **LLM 稳定性**：若使用本地小模型，建议增加 Temperature=0 以确保输出稳定性；若使用 API，请注意调用频率限制。
-4. **性能优化**：对于大规模图谱（>10k 节点），建议在 `reasoning.py` 中使用 Neo4j GDS 库替代内存图计算以提升速度。
