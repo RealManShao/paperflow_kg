@@ -1,4 +1,5 @@
 requests
 openai
 neo4j
-longchain
+streamlit
+python-dotenv

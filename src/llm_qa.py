@@ -8,17 +8,34 @@ from requests.auth import HTTPBasicAuth
 import urllib3
 from openai import OpenAI
 
+from dotenv import load_dotenv
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+load_dotenv()
 
-NEO4J_QUERY_API_URL = os.getenv("NEO4J_QUERY_API_URL", "https://57848aa8.databases.neo4j.io/db/57848aa8/query/v2")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "57848aa8")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM")
 
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api-inference.modelscope.cn/v1")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "ms-8018a0a9-2caa-4cfb-bc64-0ba0a736fc2e")
-LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen3-8B")
+NEO4J_QUERY_API_URL = os.getenv("NEO4J_QUERY_API_URL")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
+LLM_BASE_URL = (
+    os.getenv("LLM_BASE_URL")
+    or os.getenv("DEEPSEEK_API_BASE")
+    or os.getenv("OPENAI_BASE_URL")
+    or os.getenv("OPENAI_API_BASE")
+    or "https://api.openai.com/v1"
+)
+LLM_API_KEY = (
+    os.getenv("LLM_API_KEY")
+    or os.getenv("DASHSCOPE_API_KEY")
+    or os.getenv("OPENAI_API_KEY")
+    or os.getenv("DEEPSEEK_API_KEY")
+)
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4.1-mini")
+
+NEO4J_VERIFY_SSL = os.getenv("NEO4J_VERIFY_SSL", "true").lower() not in ("0", "false", "no")
 
 
 GRAPH_SCHEMA = dedent("""\
@@ -110,25 +127,30 @@ class GraphRAG:
     def __init__(self, neo4j_url=None, neo4j_username=None, neo4j_password=None,
                  llm_base_url=None, llm_api_key=None, llm_model=None):
         self.neo4j_url = neo4j_url or NEO4J_QUERY_API_URL
-        self.neo4j_auth = HTTPBasicAuth(
-            neo4j_username or NEO4J_USERNAME,
-            neo4j_password or NEO4J_PASSWORD,
-        )
+        self.neo4j_username = neo4j_username or NEO4J_USERNAME
+        self.neo4j_password = neo4j_password or NEO4J_PASSWORD
         self.llm_client = OpenAI(
             base_url=llm_base_url or LLM_BASE_URL,
             api_key=llm_api_key or LLM_API_KEY,
         )
         self.llm_model = llm_model or LLM_MODEL
+        if not (llm_api_key or LLM_API_KEY):
+            raise ValueError("Missing LLM_API_KEY. Set it in your environment (or .env).")
 
     def _query_neo4j(self, cypher):
+        if not self.neo4j_url:
+            raise ValueError("Missing NEO4J_QUERY_API_URL. Set it in your environment (or .env).")
+        if not (self.neo4j_username and self.neo4j_password):
+            raise ValueError("Missing Neo4j credentials. Set NEO4J_USERNAME and NEO4J_PASSWORD.")
+
         body = {"statement": cypher}
         resp = requests.post(
             self.neo4j_url,
             json=body,
-            auth=self.neo4j_auth,
+            auth=HTTPBasicAuth(self.neo4j_username, self.neo4j_password),
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             timeout=15,
-            verify=False,
+            verify=NEO4J_VERIFY_SSL,
         )
         resp.raise_for_status()
         data = resp.json()

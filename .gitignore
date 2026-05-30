@@ -1,2 +1,5 @@
 *.pyc
 .vscode/
+.env
+__pycache__/
+results/metrics.json

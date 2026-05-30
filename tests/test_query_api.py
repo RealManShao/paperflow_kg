@@ -4,10 +4,16 @@ import unittest
 import requests
 from requests.auth import HTTPBasicAuth
 
+from dotenv import load_dotenv
 
-NEO4J_URL = os.getenv("NEO4J_QUERY_API_URL", "https://57848aa8.databases.neo4j.io/db/57848aa8/query/v2")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "57848aa8")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM")
+load_dotenv()
+
+
+NEO4J_URL = os.getenv("NEO4J_QUERY_API_URL")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
+NEO4J_VERIFY_SSL = os.getenv("NEO4J_VERIFY_SSL", "true").lower() not in ("0", "false", "no")
 
 
 def _basic_auth_header(username, password):
@@ -19,6 +25,10 @@ def _basic_auth_header(username, password):
 class TestNeo4jQueryAPI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        if not (NEO4J_URL and NEO4J_USERNAME and NEO4J_PASSWORD):
+            raise unittest.SkipTest(
+                "Set NEO4J_QUERY_API_URL/NEO4J_USERNAME/NEO4J_PASSWORD to run Neo4j integration tests."
+            )
         cls.url = NEO4J_URL
         cls.auth = HTTPBasicAuth(NEO4J_USERNAME, NEO4J_PASSWORD)
         cls.headers = {
@@ -37,7 +47,7 @@ class TestNeo4jQueryAPI(unittest.TestCase):
                 auth=self.auth,
                 headers=self.headers,
                 timeout=15,
-                verify=False,
+                verify=NEO4J_VERIFY_SSL,
             )
         except Exception as e:
             raise unittest.SkipTest(f"Neo4j unreachable: {e}")

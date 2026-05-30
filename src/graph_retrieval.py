@@ -2,22 +2,34 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 
+from dotenv import load_dotenv
 
-NEO4J_Query_API_URL = os.getenv("NEO4J_Query_API_URL", "https://57848aa8.databases.neo4j.io/db/57848aa8/query/v2")
-NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "57848aa8")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM")
+load_dotenv()
+
+
+NEO4J_QUERY_API_URL = os.getenv("NEO4J_QUERY_API_URL")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+
+NEO4J_VERIFY_SSL = os.getenv("NEO4J_VERIFY_SSL", "true").lower() not in ("0", "false", "no")
 
 
 class GraphRetriever:
     def __init__(self, url=None, username=None, password=None):
-        self.url = url or NEO4J_Query_API_URL
-        self.auth = HTTPBasicAuth(username or NEO4J_USERNAME, password or NEO4J_PASSWORD)
+        self.url = url or NEO4J_QUERY_API_URL
+        if not self.url:
+            raise ValueError("Missing NEO4J_QUERY_API_URL.")
+        user = username or NEO4J_USERNAME
+        pwd = password or NEO4J_PASSWORD
+        if not user or not pwd:
+            raise ValueError("Missing Neo4j credentials. Set NEO4J_USERNAME and NEO4J_PASSWORD.")
+        self.auth = HTTPBasicAuth(user, pwd)
 
     def _run(self, query, parameters=None):
         body = {"statement": query}
         if parameters:
             body["parameters"] = parameters
-        resp = requests.post(self.url, json=body, auth=self.auth, timeout=30)
+        resp = requests.post(self.url, json=body, auth=self.auth, timeout=30, verify=NEO4J_VERIFY_SSL)
         resp.raise_for_status()
         data = resp.json()
         result_data = data.get("data", {})

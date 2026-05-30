@@ -13,12 +13,14 @@
 
 ## 2. 代码架构
 
-项目遵循模块化设计原则，目录结构如下：
+项目遵循模块化设计原则，目录结构如下（以仓库当前代码为准）：
 
 ```text
-project/
+paperflow_kg/
 ├── README.md                 # 项目说明文档
 ├── requirements.txt          # Python 依赖包列表
+├── .env.example              # 环境变量示例（复制为 .env 后填写）
+├── app.py                    # Streamlit 前端入口
 ├── data/
 │   ├── raw/                  # 原始数据文件 (entities.csv, relations.csv)
 │   └── processed/            # 预处理后的数据
@@ -27,12 +29,12 @@ project/
 │   ├── reasoning.py          # 推理模块：路径搜索、关系预测算法实现
 │   ├── graph_retrieval.py    # 图谱检索模块：子图提取、邻居节点查询
 │   ├── llm_qa.py             # LLM 问答模块：Prompt 构造、双通道（Baseline vs Augmented）问答逻辑
-│   └── evaluate.py           # 评估模块：准确率计算、幻觉检测、指标统计
+│   └── evaluate.py           # 评估模块：在少量用例上对比 baseline vs augmented
 ├── prompts/
-│   └── kg_augmented_prompt.txt # LLM 增强提示词模板
-├── results/
-│   ├── cases.md              # 测试用例与案例分析
-│   └── metrics.json          # 实验量化指标结果
+│   └── kg_augmented_prompt.txt # LLM 增强提示词模板（可选）
+└── results/
+   ├── cases.md              # 测试用例（每行一个问题）
+   └── metrics.json          # 实验量化指标（evaluate 生成）
 ├── report.pdf                # 课程报告
 └── slides.pdf                # 课堂展示 PPT
 ```
@@ -51,16 +53,75 @@ project/
 
 ## 3. 使用方法
 
+下面给出一套“从零复现到跑通”的推荐流程（不依赖任何本机固定路径）。
+
+### 3.0 快速开始（推荐）
+
+1) 创建并激活虚拟环境（任选其一）
+
+- conda：
+   ```bash
+   conda create -n paperflow_kg python=3.11 -y
+   conda activate paperflow_kg
+   ```
+
+- venv：
+   ```bash
+   python -m venv .venv
+   # Linux/Mac
+   source .venv/bin/activate
+   # Windows (PowerShell)
+   # .venv\Scripts\Activate.ps1
+   ```
+
+2) 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+3) 配置 `.env`
+
+```bash
+cp .env.example .env
+```
+
+按注释填写：Neo4j（Bolt + Query API）与 LLM（OpenAI-compatible）。
+
+4) 启动前端
+
+```bash
+python -m streamlit run app.py
+```
+
+5) （可选）快速自检
+
+- 只测 LLM（不依赖 Neo4j）：
+   ```bash
+   python src/llm_qa.py --mode baseline --question "Reply with exactly: OK"
+   ```
+- 测 Neo4j Query API（需要配置 `NEO4J_QUERY_API_URL` 等）：
+   ```bash
+   python -m unittest discover -s tests -q
+   ```
+
 ### 3.1 环境准备
 
 1. **安装 Python 依赖**：
    ```bash
    pip install -r requirements.txt
    ```
-   *主要依赖：`neo4j`, `networkx`, `pandas`, `openai`*
+   *主要依赖：`neo4j`, `requests`, `openai`, `streamlit`*
 
 2. **启动 Neo4j 数据库**：
-   - Free Aura service
+   - 推荐 Neo4j Aura（需要同时开通 Bolt 连接 + Query API v2）
+
+3. **配置环境变量**（推荐使用 `.env`）
+   - 将 `.env.example` 复制为 `.env` 并填写：
+     - `NEO4J_URI`, `NEO4J_DATABASE`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`（用于 `src/build_kg.py`）
+     - `NEO4J_QUERY_API_URL`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`（用于查询/推理/GraphRAG）
+       - `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`（OpenAI-compatible）
+          - 兼容别名：`DEEPSEEK_API_BASE` 可作为 `LLM_BASE_URL`，`DASHSCOPE_API_KEY` 可作为 `LLM_API_KEY`
 
 
 ### 3.2 数据准备
@@ -82,11 +143,16 @@ python src/build_kg.py
 
 ### 3.4 配置 LLM
 
-在 `src/llm_qa.py` 或环境变量中配置 LLM 密钥或本地模型地址：
+通过环境变量配置（建议写入 `.env`）：
 
-```python
-OPENAI_API_KEY = "sk-..."
-```
+- `LLM_BASE_URL`：OpenAI-compatible 接口地址（默认 `https://api.openai.com/v1`）
+- `LLM_API_KEY`：你的 API Key
+- `LLM_MODEL`：模型名（默认 `gpt-4.1-mini`，可改为任意兼容模型）
+
+例如使用 DashScope OpenAI-compatible：
+- `DEEPSEEK_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1`
+- `DASHSCOPE_API_KEY=...`
+- `LLM_MODEL=qwen3.6-flash`
 
 ### 3.5 运行问答与评估
 
@@ -96,11 +162,41 @@ python src/llm_qa.py --mode interactive
 ```
 输入问题，系统将分别展示“基线回答”和“图谱增强回答”，并高亮显示使用的图谱证据。
 
+#### 方式一（推荐）：前端交互界面（Streamlit）
+```bash
+python -m streamlit run app.py
+```
+在浏览器中提供四个页签：`KG 构建 / 图谱检索 / 推理 / 问答`。
+
+**前端使用方法（简要）**
+
+1. 左侧栏会显示当前 `.env`/环境变量读取到的配置（Neo4j/LLM），可点击 **“测试 Neo4j Query API”** 做连通性自检。
+2. `KG 构建`：将 `data/processed/entities.csv` 与 `data/processed/relations.csv` 导入 Neo4j（需要配置 Bolt：`NEO4J_URI` 等）。
+3. `图谱检索`：按名称模糊搜索实体（可选类型），选择结果后：
+   - 如果是 Paper：展示论文详情（作者/引用/会议/领域等）。
+   - 其他实体：展示 k-hop 邻居列表。
+4. `推理`：输入 `source_id` 和 `target_id`（实体 id），查找最短路径并展示证据链。
+5. `问答`：输入问题后可选择运行 `Baseline`（纯 LLM）或 `Augmented`（KG+LLM，会展示生成的 Cypher 与查询结果）。
+
+**常见报错**
+
+- `No module named streamlit`
+   - 原因：你运行 `python` 的环境里没装依赖（没激活 conda/venv，或装在了另一个环境）。
+   - 处理：重新激活环境后执行 `pip install -r requirements.txt`，并用同一个环境运行 `python -m streamlit ...`。
+
+- `Missing NEO4J_QUERY_API_URL` / `Missing Neo4j credentials`
+   - 原因：`.env` 中 Neo4j Query API 配置缺失。
+   - 处理：补齐 `NEO4J_QUERY_API_URL / NEO4J_USERNAME / NEO4J_PASSWORD`。
+
+- LLM 401/403
+   - 原因：LLM key 或 base_url/model 配置不正确。
+   - 处理：检查 `LLM_BASE_URL/LLM_API_KEY/LLM_MODEL`（或别名 `DEEPSEEK_API_BASE/DASHSCOPE_API_KEY`）。
+
 #### 方式二：批量实验评估
 ```bash
 python src/evaluate.py
 ```
-系统将自动读取 `results/cases.md` 中的测试问题，执行对比实验，并将量化指标保存至 `results/metrics.json`。
+系统将读取 `results/cases.md` 中的测试问题，执行对比实验，并将量化指标保存至 `results/metrics.json`。
 
 ### 3.6 查看结果
 
@@ -114,3 +210,4 @@ python src/evaluate.py
 
 1. **数据唯一性**：确保 `entities.csv` 中的 ID 全局唯一，否则导入时会因唯一约束冲突报错。
 2. **关系类型映射**：`build_kg.py` 中预定义了关系类型映射表，若新增关系类型，请在 `RELATION_MAPPING` 字典中添加对应项。
+3. **安全性**：仓库代码不会内置任何真实的 Neo4j/LLM 密钥；请使用环境变量或 `.env` 提供。

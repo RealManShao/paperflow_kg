@@ -2,11 +2,17 @@ import csv
 import os
 from neo4j import GraphDatabase
 
+from dotenv import load_dotenv
+
 # ================= 配置区域 =================
-NEO4J_URI='neo4j+s://57848aa8.databases.neo4j.io'
-NEO4J_USERNAME='57848aa8'
-NEO4J_PASSWORD='fUd3NQz35sxryBBLbHZ1vdxbXE4sgDzIxNTADdlMNsM'
-NEO4J_DATABASE='57848aa8'
+# 说明：为了便于复现与安全，连接信息全部从环境变量读取。
+# 推荐在项目根目录创建 .env（可参考 .env.example）。
+load_dotenv()
+
+NEO4J_URI = os.getenv("NEO4J_URI", "neo4j://localhost:7687")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 # 文件路径
 ENTITY_FILE = "data/processed/entities.csv"
 RELATION_FILE = "data/processed/relations.csv"
@@ -34,6 +40,10 @@ RELATION_MAPPING = {
 
 class KGBuilder:
     def __init__(self, uri, user, password, database_name):
+        if not user or not password:
+            raise ValueError(
+                "Missing Neo4j credentials. Set NEO4J_USERNAME and NEO4J_PASSWORD in your environment (or .env)."
+            )
         self.driver = GraphDatabase.driver(uri, auth=(user, password), database=database_name)
 
     def close(self):
